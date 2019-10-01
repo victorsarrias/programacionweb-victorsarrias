@@ -1,0 +1,1679 @@
+/* Table of Contents
+
+* init
+* setup_nav 
+* custom_settings
+* attachment_load
+* attachment_data
+* attachment_link
+* attachment_preload
+* check_preload
+* attachment_ajax
+* attachment_display
+* attachment_display_reset
+* set_current
+* resize
+* lightbox_resize
+* slider_resize
+* list_resize
+* resize_update
+* data_resize
+* info_resize
+* commenter_cookies_init
+* commenter_set_cookies
+* commenter_set_info
+* set_placeholders
+* timers
+
+*/
+
+( function($) {
+
+	var methods = {
+	
+		init : function( options ) {
+			
+			return this.each( function(){
+
+				// Create default options
+				var settings = {
+					type								: 'lightbox',
+					width								: false,
+					height							: false,
+					max_width 					: 1100,
+					max_height 					: 600,
+					sidebar_width 			: 300,
+					padding 						: 10,
+					show_titles					: true,
+					show_descriptions		: true,
+					show_comments				: true,
+					nav_position				: 'bottom-center',
+					nav_overlay					: false,
+					nav_buttons					: false,
+					animation_speed			: 500,
+					data_position				: 'sidebar',
+					sidebar_position		: 'right',
+					autohide_info				: false,
+					autohide_nav				: false,
+					timer								: false,
+					timer_speed					: 7,
+					security						: false
+				};
+				
+				// Create data variables
+				var attachment_content_width;
+				var attachment_content_height;
+
+				var sidebar_scroll_top;
+				var scroll_pos;
+				var scroll_shadow = false;
+
+				var animation_speed = 0;
+				
+				var init = false;
+				
+				var ajax;
+				
+				var preloaded_attachments = Array();
+				var attachments = Array();
+				var total;
+				var current = 0;
+				var current_att = -1;
+				
+				var sidebar = true;
+				var interactive = true;
+
+				var comment_author_cookie = '';
+				var comment_author_email_cookie = '';
+				var comment_author_url_cookie = '';
+				
+				var comment_count;
+				
+				var placeholder_support;
+				
+				// Create object variables
+				var $selected;
+				
+				var $window;
+				var $html;
+				var $body;
+				var $overlay;
+				var $container_wrapper;
+				var $container;
+				var $attachment_container;
+				var $attachment;
+				var $attachment_content;
+				var $nav_container;
+				var $prev;
+				var $next;
+				
+				var $lightbox_close_button;
+				
+				var $mediaelement;
+	
+				var $data;
+				var $data_container;
+				var $overlay_info;
+				var $entry_title;
+				var $entry_description;
+				var $sidebar_scroll_container;
+				var $sidebar_scroll_shadow;
+				var $sidebar_scroll;
+				var $comment_list;
+				var $comment_form_container;
+				var $comment_form;
+				var $comment_collapse;
+				var $comment_loading_gif;
+				var $comment_count;
+				var $comment_warning;
+				
+				var $comment_author;
+				var $comment_author_email;
+				var $comment_author_url;
+				var $comment_input;
+				var $comment_submit;
+				
+				// Add any set options
+				if (options) { 
+					$.extend(settings, options);
+				}
+				
+				// Set placeholder support
+				placeholder_support = mediablender_placeholder_support();
+
+				// Check and add custom settings
+				mediablender_custom_settings( $(this) );
+				
+				// Initialize the commenter
+				mediablender_commenter_cookies_init();
+
+				// Create and save the box elements
+				$attachment_container = jQuery('<div class="mediablender-attachment-container"></div>');
+				//$attachment = jQuery('<div class="mediablender-attachment"></div>');
+				$attachment_container.append($attachment);
+				
+				$data = jQuery('<div class="mediablender-data"></di>');
+				
+				// Setup a lightbox gallery
+				if( settings.type == 'lightbox' ) {
+				
+					// Create the objects
+					$window = jQuery(window);
+					$html = jQuery('html');
+					$body = jQuery('body');
+					$overlay = jQuery('<div class="mediablender-overlay"></div>');
+					$lightbox_close_button = jQuery( '<a href="#" class="mediablender-lightbox-close"></a>' );
+					
+					$container = jQuery('<div class="mediablender-container mediablender-lightbox" class="clearfix"></div>');
+					$container.append( $attachment_container );
+					
+					// Gather the attachments & save the total
+					var rel = $(this).attr('rel');
+					
+					jQuery( '[rel="'+rel+'"]' ).each( function(index) {		
+						var att = Array();
+						att['id'] = jQuery(this).attr('id');
+						att['link'] = jQuery(this).attr('href');
+						att['target'] = jQuery(this).attr('target');
+						attachments.push( att );
+					});
+					
+					total = attachments.length;	
+					
+					
+				// Setup a slider gallery
+				} else if( settings.type == 'slider' ) {
+
+					// Save the container
+					$container = $(this).children('.mediablender-container').addClass('clearfix');
+	
+					// Gather the attachments & save the total
+					$container.children().each( function(index) {
+						var att = Array();
+						att['id'] = jQuery(this).attr('id');
+						att['link'] = jQuery(this).attr('href');
+						att['target'] = jQuery(this).attr('target');
+						attachments.push( att );
+						jQuery(this).remove();
+					});
+					
+					total = attachments.length;
+					
+					/**
+					 * Add the attachment container.
+					 * MUST GO AFTER ATTACHMENTS ARE SAVED!
+					 */
+					$container.append( $attachment_container );
+					
+					$container_wrapper = jQuery('<div class="mediablender-container-wrapper clearfix"></div>');
+					$container.wrap( $container_wrapper );
+
+				// Setup a list gallery
+				} else if( settings.type == 'list' ) {
+				
+					// Get the parent and attributes
+					var $parent = $(this).parent();
+					var att_id = $(this).attr('id');
+					var $style = $(this).attr('style');
+					$(this).remove();
+
+					// Create the objects
+					$container = jQuery('<div class="mediablender-container clearfix" style="'+$style+'"></div>');
+					$container.append( $attachment_container );
+					$parent.append($container);
+				}
+				
+				// Add the data sidebar
+				if( sidebar ) {
+					$container.append( $data );
+				}		
+						
+				// If there's more than 1 attachment add prev/next
+				if( settings.type == 'lightbox' || settings.type == 'slider' ) {
+					if( total > 1 ) {
+						if( settings.nav_position != 'none' ) {
+							// Setup the nav
+							mediablender_setup_nav();	
+						}
+						$prev = jQuery('<a href="#" class="mediablender-direction-nav mediablender-direction-nav-prev"></a>');
+						$next = jQuery('<a href="#" class="mediablender-direction-nav mediablender-direction-nav-next"></a>');
+						$prev.hide();
+						$next.hide();
+						$attachment_container.append($prev, $next);
+					}
+				}
+				
+				// Check for sidebar position
+				if( settings.sidebar_position == 'left' ) {
+					$container.addClass( 'mediablender-sidebar-left' );
+				}
+				
+				// Check for data position
+				if( settings.data_position != 'sidebar' && settings.data_position != 'above' && settings.data_position != 'below' ) {
+					$overlay_info = jQuery('<div class="mediablender-overlay-info"></di>');
+					$attachment_container.append($overlay_info);	
+					if( settings.data_position == 'overlay_top' ) {
+						$container.addClass( 'mediablender-overlay-info-top' );
+					} else if( settings.data_position == 'overlay_bottom' ) {
+						$container.addClass( 'mediablender-overlay-info-bottom' );
+					}
+				}
+				
+				
+				// Check for nav autohide
+				if( settings.autohide_nav ) {
+					$container.addClass( 'mediablender-autohide-nav' );
+				}
+				
+				// Check for info autohide
+				if( settings.autohide_info ) {
+					$container.addClass( 'mediablender-autohide-info' );
+				}
+				
+				// Setup the attachments
+				if( settings.type == 'slider' ) {
+					mediablender_attachment_load( attachments[0]['id'] );
+				} else if( settings.type == 'list' ) {
+					mediablender_attachment_load( att_id );
+				}
+			
+				
+				/*-----------------------------------------------------------------------------------*/
+				/*	Functions
+				/*-----------------------------------------------------------------------------------*/
+				
+				
+				/**
+				 * Setup the nav
+				 * 
+				 * @since 1.1
+				 */
+				function mediablender_setup_nav() {
+					
+					var classes = ( settings.nav_buttons ) ? settings.nav_position + ' mediablender-nav-buttons' : settings.nav_position;
+					$nav_container = jQuery( '<div class="mediablender-nav-container '+classes+'"></div>' );
+
+					for( var i=0; i<total; i++ ) {
+						var count = ( settings.nav_buttons ) ? '' : (i+1);
+						var nav_before = ( mediablender_vars.nav_settings.nav_before ) ? mediablender_vars.nav_settings.nav_before : '';
+						var nav_after = ( mediablender_vars.nav_settings.nav_after ) ? mediablender_vars.nav_settings.nav_after : '';
+						var nav_link_before = ( mediablender_vars.nav_settings.nav_link_before ) ? mediablender_vars.nav_settings.nav_link_before : '';
+						var nav_link_after = ( mediablender_vars.nav_settings.nav_link_after ) ? mediablender_vars.nav_settings.nav_link_after : '';
+						
+						var $nav = jQuery( nav_before+'<a class="mediablender-nav-item" href="'+attachments[i]['id']+'">'+nav_link_before+count+nav_link_after+'</a>'+nav_after );
+						$nav_container.append( $nav );
+						
+						/**
+						 * Nav clicks
+						 */
+						$nav.click( function(e) {
+							e.preventDefault();
+							if( interactive ) {
+								if( ajax ) {
+									ajax.abort();
+								}
+								mediablender_attachment_load( jQuery(this).attr('href') );
+							}
+						});
+					}
+					
+					if( settings.nav_overlay ) {
+						$attachment_container.append( $nav_container );
+						$container.addClass( 'mediablender-nav-overlay' );
+					} else {
+						if( settings.nav_position == 'top-left' || settings.nav_position == 'top-center' || settings.nav_position == 'top-right' ) {
+							$container.before( $nav_container );
+						} else {
+							$container.after( $nav_container );
+						}
+					}
+				}
+				
+				
+				/**
+				 * Add custom settings that override the defaults
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_custom_settings( $this ) {
+					
+					var $div;
+					
+					// Setup a lightbox gallery
+					if( settings.type == 'lightbox' ) {
+						$div = $this.parent().parent().parent().children('.mediablender-settings');
+					} else if( settings.type == 'slider' ) {
+						$div = $this.children('.mediablender-settings');
+					} else if( settings.type == 'list' ) {
+						$div = $this.parent().parent().children('.mediablender-settings');
+					}
+
+					if( $div ) {
+						$div.children('input').each( function( index ) {
+							
+							var name = jQuery(this).attr('name');
+
+							switch ( name ) {
+								
+								case 'data_position':
+									settings.data_position = jQuery(this).val();
+									break;
+								case 'nav_position':
+									settings.nav_position = jQuery(this).val();
+									break;
+								case 'width':
+									settings.width = jQuery(this).val();
+									break;
+								case 'height':
+									settings.height = jQuery(this).val();
+									break;
+								case 'show_titles':
+									settings.show_titles = ( jQuery(this).val() == 'true' ) ? true : false;
+									break;
+								case 'show_descriptions':
+									settings.show_descriptions = ( jQuery(this).val() == 'true' ) ? true : false;
+									break;
+								case 'show_comments':
+									settings.show_comments = ( jQuery(this).val() == 'true' ) ? true : false;
+									break;
+								case 'timer':
+									settings.timer = ( jQuery(this).val() == 'true' ) ? true : false;
+									break;
+								case 'timer_speed':
+									settings.timer_speed = jQuery(this).val();
+									break;
+							}
+						});
+					}
+					
+					// If this is a lightbox, adjust the width & height
+					if( settings.type == 'lightbox' ) {
+						settings.nav_overlay = true;
+						settings.width = settings.max_width;
+						settings.height = settings.max_height;
+					}
+					
+					// If the sidebar is disabled, adjust the data width
+					if( !settings.show_comments) {
+						if( settings.data_position != 'sidebar' ) {
+							sidebar = false;
+							settings.sidebar_width = 0;
+						} else if( !settings.show_titles && !settings.show_descriptions) {
+							sidebar = false;
+							settings.sidebar_width = 0;
+						}
+					}
+					
+					// If there isn't an width set, set it to the containers width
+					if( !settings.width ) {	
+						settings.width = $this.width();
+					}
+				}
+				
+				/**
+				 * Load an attachment.
+				 *
+				 * Sets up a preloaded attachment if it's preloaded.
+				 * Otherwise it loades the attachment via ajax.
+				 *
+				 * This also calls the function to store the current attachment number.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_attachment_load( att_id ) {
+		
+					// Stop the timer
+					if( settings.timer ) {
+						mediablender_timer_stop();
+					}
+				
+					// Set the current var
+					mediablender_set_current( att_id );
+					
+					// If initialized, remove the old content
+					if( settings.type == 'lightbox' || settings.type == 'slider' ) {
+						
+						if( init ) {
+							if( $attachment_content.hasClass('mediablender-attachment-video') ) {
+								$attachment_content.remove();
+							} else {
+								$attachment_content.fadeOut( settings.animation_speed, function(){
+									jQuery(this).remove();
+								});
+							}
+							if( $overlay_info ) {
+								$overlay_info.children('.mediablender-overlay-info-inside').fadeOut( settings.animation_speed, function(){
+									jQuery(this).remove();
+								});
+							}
+							if( $data_container ) {
+								$data_container.remove();
+							}
+							if( $entry_title ) {
+								$entry_title.remove();
+							}
+							if( $entry_description ) {
+								$entry_description.remove();
+							}
+							if( settings.type != 'lightbox' || settings.sidebar_width == 0 ) {
+								animation_speed = settings.animation_speed;
+							}
+							// Stop any playing ME videos, audio
+							if( $mediaelement ) {
+								$mediaelement[0].player.pause();	
+							}
+						} else {
+							init = true;
+							if( settings.type == 'lightbox' ) {
+								$body.append( $overlay );
+								$body.append( $container );
+								$container.append( $lightbox_close_button );
+								if( settings.nav_position != 'none' ) {
+									jQuery( '.mediablender-nav-item[href="'+current_att+'"]' ).addClass( 'active' );
+								}
+							}
+						}	
+					}
+					
+					if( mediablender_check_preload( att_id ) ) {
+						mediablender_attachment_display( mediablender_attachment_data( att_id ), att_id );
+					} else {
+						mediablender_attachment_ajax( att_id, true );
+					}
+				}
+				
+				/**
+				 * Setup a preloaded attachment.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_attachment_data( att_id ) {
+					
+					var data = false;
+					
+					jQuery.each( preloaded_attachments, function ( index, value ) {	
+						if( att_id == value.id ) {
+							data = value.data;
+							return false;
+						}
+					});
+					
+					return data;
+				}
+				
+				/**
+				 * Get an attachment link.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_attachment_link( att_id ) {
+					
+					var linked = Array();
+					
+					jQuery.each( attachments, function ( index, value ) {	
+					
+						if( att_id == value.id ) {
+							if( value.link != '#' ) {
+								linked['link'] = value.link;
+								linked['target'] = value.target;
+							}
+							return false;
+						}
+					});
+
+					return linked;
+				}
+
+				/**
+				 * Find the next attachment to preload.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_attachment_preload() {
+					
+					var next_id = false;
+					
+					for( var i=0; i<attachments.length; i++ ) {
+						if( !mediablender_check_preload(attachments[i]['id']) ) {
+							next_id = attachments[i]['id'];
+							break;
+						}
+					}
+					
+					return next_id;
+				}
+				
+				/**
+				 * Check to see if an attachment has been preloaded.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_check_preload( att_id ) {
+						
+					var preloaded = false;
+					
+					jQuery.each( preloaded_attachments, function ( index, value ) {	
+						if( att_id == value.id ) {
+							preloaded = true;
+							return false;
+						}
+					});
+					
+					return preloaded;
+				}
+
+				/**
+				 * Get attachment data via ajax.
+				 * 
+				 * @since 1.1
+				 */
+				function mediablender_attachment_ajax( att_id, display ) {
+				
+					// Create the data to pass
+					var data = {
+						action: 'mediablender_structure',
+						type: settings.type,
+						att_id: att_id,
+						title: settings.show_titles,
+						description: settings.show_descriptions,
+						comments: settings.show_comments,
+						width: settings.width-settings.sidebar_width,
+						height: settings.height,
+						security: settings.security
+					};
+				
+					// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+					ajax = jQuery.post( ajaxurl, data, function( response ) {
+						
+						if( settings.type == 'lightbox' || settings.type == 'slider' ) {
+							if( display == true ) {
+								mediablender_attachment_display( response, att_id );
+							}
+							
+							// If the attachment is an image, preload the image
+							var $temp = jQuery(response).find('.mediablender-attachment').children();
+							if( $temp.is('img') ) {
+								$temp.load( function() {
+									preloaded_attachments.push( {id:att_id, data:response} );
+									var next_id = mediablender_attachment_preload();
+									if( next_id ) {
+										mediablender_attachment_ajax( next_id, false );
+									}
+								});
+							} else {
+								preloaded_attachments.push( {id:att_id, data:response} );
+								var next_id = mediablender_attachment_preload();
+								if( next_id ) {
+									mediablender_attachment_ajax( next_id, false );
+								}		
+							}					
+						} else {
+							mediablender_attachment_display( response, att_id );
+						}
+					});
+				}
+				
+				/**
+				 * Display the new attachment
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_attachment_display( data, att_id ) {
+					
+					// Set the intaractive toggle	
+					interactive = false;
+				
+					var $new_container = jQuery( data );
+					
+					// Reset all of the elements for IE7
+					$data_container = null;
+					$mediaelement = null;
+					$attachment_content = null;
+					$entry_title = null;
+					$entry_description = null;
+					$overlay_info_inside = null;
+					$sidebar_scroll_container = null;
+					$sidebar_scroll_shadow = null;
+					$sidebar_scroll = null;
+					$comment_count = null;
+					$comment_list = null;
+					$comment_form_container = null;
+					$comment_collapse = null;
+					$comment_form = null;
+					$comment_input = null;
+					$comment_author = null;
+					$comment_author_email = null;
+					$comment_author_url = null;
+					$comment_submit = null;
+					$comment_loading_gif = null;
+					$comment_warning = null;		
+					
+					$data_container = $new_container.find('.mediablender-data-container');
+					$data_container.css('width', settings.sidebar_width+'px');
+					
+					if( $new_container.find('.mediablender-attachment').children().is('video') ) {
+						$mediaelement = $new_container.find('.mediablender-attachment').children();
+						attachment_content_width = $mediaelement.attr('width');
+						attachment_content_height = $mediaelement.attr('height');
+						$attachment_content = jQuery('<div class="mediablender-attachment-video"></div>');
+						$attachment_content.append($mediaelement);
+					} else if( $new_container.find('.mediablender-attachment').children().is('audio') ) {
+						$mediaelement = $new_container.find('.mediablender-attachment').children();
+						attachment_content_width = $mediaelement.attr('width');
+						attachment_content_height = $mediaelement.attr('height');
+						$attachment_content = jQuery('<div class="mediablender-attachment-audio"></div>');
+						$attachment_content.append($mediaelement);
+					} else if( $new_container.find('.mediablender-attachment').children().is('img') ) {
+						var linked = mediablender_attachment_link( att_id );
+						if( linked['link'] ) {
+							$attachment_content = jQuery( '<a class="mediablender-attachment-link" href="'+linked['link']+'" target="'+linked['target']+'"></a>' );
+							var $attachment_content_child = $new_container.find('.mediablender-attachment').children();
+							$attachment_content.append( $attachment_content_child );
+							attachment_content_width = $attachment_content_child.attr('width');
+							attachment_content_height = $attachment_content_child.attr('height');
+							$attachment_content_child.removeAttr('width');
+							$attachment_content_child.removeAttr('height');
+						} else {
+							$attachment_content = $new_container.find('.mediablender-attachment').children();
+							attachment_content_width = $attachment_content.attr('width');
+							attachment_content_height = $attachment_content.attr('height');
+							$attachment_content.removeAttr('width');
+							$attachment_content.removeAttr('height');
+						}
+					} else {
+						$attachment_content = $new_container.find('.mediablender-attachment').children();
+						attachment_content_width = $attachment_content.attr('width');
+						attachment_content_height = $attachment_content.attr('height');
+						$attachment_content.removeAttr('width');
+						$attachment_content.removeAttr('height');
+					}
+					
+					// Add the new data
+					$attachment_content.hide();
+					$attachment_container.prepend($attachment_content);
+
+					if( $mediaelement ) {
+
+			    	$mediaelement.mediaelementplayer({
+			    		videoWidth : '100%',
+							videoHeight : '100%',
+							audioWidth : '100%',
+							audioHeight : '100%',
+							videoVolume: 'horizontal',
+							success: function(player, node) {
+								//$attachment_container.append('<p style="position:absolute;z-index:99999;top:20px;left:20px;color:#FFF;background:#000;">Succes (mode: ' + player.pluginType+')</p>');
+							},
+							error: function () { 
+								//console.log('there was an error');
+							}
+						});
+
+						$attachment_content.fadeIn( settings.animation_speed, function() {
+							// Set the intaractive toggle	
+							interactive = true;	
+							
+							// Start the timer
+							if( settings.timer ) {
+								mediablender_timer_start();
+							}
+						});	
+					} else if( $attachment_content.children().length > 0 ) {
+						$attachment_content.children().load( function() {
+							$attachment_content.fadeIn( settings.animation_speed, function() {
+								// Set the intaractive toggle	
+								interactive = true;	
+								
+								// Start the timer
+								if( settings.timer ) {
+									mediablender_timer_start();
+								}
+							});
+						});
+					} else {
+						$attachment_content.load( function() {
+							$attachment_content.fadeIn( settings.animation_speed, function() {
+								// Set the intaractive toggle	
+								interactive = true;	
+								
+								// Start the timer
+								if( settings.timer ) {
+									mediablender_timer_start();
+								}
+							});
+						});
+					}
+
+					// Save the title & description
+					$entry_title = $data_container.find('.mediablender-entry-title');
+					$entry_description = $data_container.find('.mediablender-entry-description');
+					
+					// Move the info to the overlay if necessary
+					if( $overlay_info ) {
+						var $overlay_info_inside = jQuery('<div class="mediablender-overlay-info-inside"></div>');
+						if( $entry_title.length > 0 ) {
+							$overlay_info_inside.append($entry_title);
+						}
+						if( $entry_description.length > 0  ) {
+							$overlay_info_inside.append($entry_description);
+						}
+						if( $entry_title.length > 0 || $entry_description.length > 0 ) {
+							$overlay_info_inside.hide();
+							$overlay_info.append( $overlay_info_inside );
+							$overlay_info_inside.fadeIn( settings.animation_speed );
+						}
+					}
+					
+					if( settings.data_position == 'above' ) {
+						$container.before($entry_title);
+						$container.before($entry_description);
+					} else if( settings.data_position == 'below' ) {
+						$container.after($entry_description);
+						$container.after($entry_title);
+					}
+					
+					// Save the box scroll
+					$sidebar_scroll_container = $data_container.find('.mediablender-sidebar-scroll-container');
+					if( settings.sidebar_width != 0 ) {
+						$sidebar_scroll_shadow = $sidebar_scroll_container.children('.mediablender-scroll-shadow-top');
+						$sidebar_scroll = $sidebar_scroll_container.children('div.mediablender-sidebar-scroll');
+						sidebar_scroll_top = $sidebar_scroll_container.position().top;
+					} else {
+						sidebar_scroll_top = 0;
+					}
+					
+					if( settings.show_comments ) {
+					
+						$comment_count = $new_container.find('.mediablender-comment-count').children('a');
+						comment_count = parseInt($comment_count.text());
+						
+						// Save the comment form
+						$comment_list = $new_container.find('.mediablender-commentlist');
+						$comment_form_container = $new_container.find('.mediablender-commentform-container');
+						$comment_collapse = $comment_form_container.find('.mediablender-collapse-button');
+						$comment_form = $comment_form_container.find('form');
+						$comment_input = $comment_form.find('textarea');
+						
+						$comment_author = $comment_form.find('.comment-form-author');
+						$comment_author_email = $comment_form.find('.comment-form-email');
+						$comment_author_url = $comment_form.find('.comment-form-url');
+						$comment_submit = $comment_form.find('input[type="submit"]');
+						$comment_loading_gif = $comment_form_container.find('.m4c-loading-gif');
+						
+						// Prepopulate commenter info
+						mediablender_commenter_set_info();
+						
+						// Set the input placeholders
+						mediablender_set_placeholders( $comment_form );
+						
+						
+						
+						/**
+						 * Listen for the sidebar scroll
+						 * 
+						 * @since 1.0
+						 */
+						$sidebar_scroll.scroll( function() {
+							
+							if( jQuery(this).scrollTop() > 0 && !scroll_shadow ) {
+								scroll_shadow = true;
+								$sidebar_scroll_shadow.stop().animate( {
+									opacity: 1
+								}, 500 );
+								
+							} else if( jQuery(this).scrollTop() == 0 && scroll_shadow ) {
+								scroll_shadow = false;
+								$sidebar_scroll_shadow.stop().animate( {
+									opacity: 0
+								}, 500 );
+							}
+						})
+						
+						
+						/**
+						 * Scroll down to the comments when clicked.
+						 * 
+						 * @since 1.0
+						 */
+						$comment_count.click( function( e ) {
+							e.preventDefault();
+							$sidebar_scroll.animate( {
+								scrollTop: $comment_list.position().top
+							}, 1000, 'easeOutExpo' );	
+						});
+						
+						/**
+						 * Comment field click listener.
+						 * 
+						 * @since 1.0
+						 */
+						$comment_input.click( function() {
+							mediablender_expand_comments();
+						});
+						
+						/**
+						 * Comment collapse click listener.
+						 * 
+						 * @since 1.0
+						 */
+						$comment_collapse.click( function(e) {
+							e.preventDefault();
+							mediablender_collapse_comments();
+						});
+
+						
+						/**
+						 * Comment submit listener.
+						 * 
+						 * @since 1.0
+						 */
+						$comment_form.submit( function( e ){
+							
+							e.preventDefault();
+							
+							if( !placeholder_support ){		
+							  $comment_form.find( '[placeholder]' ).each( function() {
+									var input = jQuery( this );
+									if ( input.val() == input.attr('placeholder') ) {
+									  input.val( '' );
+									}
+							  })
+							}
+							
+							// Remove any warnings
+							if( $comment_warning ) {
+								$comment_warning.slideDown( function() {
+										jQuery(this).remove();
+										mediablender_resize();
+								});
+							}
+
+							// Fade out the submit and fade in the loading gif
+							$comment_submit.fadeOut();
+							$comment_loading_gif.fadeIn();
+							
+							var formdata = $comment_form.serialize();
+							var formurl = $comment_form.attr('action');
+							jQuery.post( formurl, formdata, function() {})
+							.success(function( response ) {
+				
+								mediablender_collapse_comments();
+								
+								// Store the users info
+								if( $comment_author.length > 0 ) {
+									var author = $comment_author.find('input[type="text"]').val();
+									var email = $comment_author_email.find('input[type="text"]').val();
+									var url = $comment_author_url.find('input[type="text"]').val();
+									mediablender_commenter_set_cookies( author, email, url );
+									mediablender_commenter_set_info();
+								}
+								
+								// Add the comments
+								var comment_error = false;
+								var $comment = jQuery(response);
+								if( $comment.length > 1 ) {
+									for ( var i=0; i<$comment.length; i++ ) {
+										if( jQuery($comment[i]).is('li') ) {
+											$comment = jQuery($comment[i]);
+											break;
+										}
+										if( jQuery($comment[i]).is('p') ) {
+											comment_error = true;
+											$comment_warning = jQuery($comment[i]).addClass('mediablender-comment-warning');
+											$comment_warning.hide();
+											$comment_form_container.prepend( $comment_warning );
+											$comment_warning.slideDown( function() {
+												mediablender_resize();
+											});
+											break;
+										}
+									}
+								}
+								
+								if( comment_error ) {
+									// Put the submit button back on screen
+									$comment_submit.fadeIn();
+									$comment_loading_gif.fadeOut();
+									// Set the input placeholders
+									mediablender_set_placeholders( $comment_form );
+								} else {
+									$comment.hide();
+									$comment_list.append( $comment );
+									$comment.slideDown();
+									$comment_input.val('');
+									
+									// Fade out the loading gif and fade in the submit
+									$comment_submit.fadeIn();
+									$comment_loading_gif.fadeOut();
+									
+									// Scroll the comments to the bottom
+									$sidebar_scroll.animate( {
+										scrollTop: $sidebar_scroll[0].scrollHeight
+									}, 1000, 'easeOutExpo' );	
+									
+									// Add to the comment count
+									comment_count = comment_count+1;
+									if( comment_count == 1 ) {
+										$comment_count.text( comment_count + ' ' + mediablender_vars.comment_single );
+									} else {
+										$comment_count.text( comment_count + ' ' + mediablender_vars.comment_text );
+									}
+									
+									// Remove the preloaded data so the attachment can be refreshed
+									var remove_id;
+									for( var i=0; i<preloaded_attachments.length; i++ ) {
+										if( current_att == preloaded_attachments[i]['id'] ) {
+											remove_id = i;
+											break;
+										}
+									}
+									preloaded_attachments.splice( remove_id,1 );
+								}
+							})
+							.error(	function( error ) {
+							
+								// Find and show the error in an alert
+								var $error = jQuery(error.responseText);
+								for( var i=0; i<$error.length; i++ ){
+									if( jQuery($error[i]).is('p') ) {
+										$comment_warning = jQuery($error[i]).addClass('mediablender-comment-warning');
+										$comment_warning.hide();
+										$comment_form_container.prepend( $comment_warning );
+										$comment_warning.slideDown( function() {
+											mediablender_resize();
+										});
+									}
+								}
+								
+								// Put the submit button back on screen
+								$comment_submit.fadeIn();
+								$comment_loading_gif.fadeOut();
+								// Set the input placeholders
+								mediablender_set_placeholders( $comment_form );
+							});						
+						});
+					}
+						
+					if( sidebar ) {	
+						$data_container.hide();
+						$data.prepend($data_container);
+						$data_container.fadeIn( settings.animation_speed );
+					}
+					
+					if( settings.type == 'lightbox' ) {
+						
+						// Set the html overflow
+						$html.css({
+							overflow: 'hidden'
+						});
+						
+						// Save the scroll pos
+						scroll_pos = $window.scrollTop();
+					
+						// Resize the lightbox
+						mediablender_lightbox_resize();
+					}
+					if( settings.type == 'slider' ) {
+						// Resize the attachment & container
+						mediablender_slider_resize();
+					}
+					if( settings.type == 'list' ) {
+						// Resize the attachment & container
+						mediablender_list_resize();
+					}
+				}
+				
+				/**
+				 * Attachment reset function
+				 */
+				function mediablender_attachment_display_reset() {
+					
+					init = false;
+					
+					if( $attachment_content ) {
+						$attachment_content.remove();
+					}
+					$container.detach();
+					$overlay.detach();
+					
+					if( $data_container ) {
+						$data_container.remove();	
+					}
+					if( $overlay_info ) {
+						$overlay_info.remove();	
+					}
+				
+					$html.css({
+						height: '100%',
+						overflow: 'auto'
+					});
+
+					// Stop any playing ME videos, audio
+					if( $mediaelement ) {
+						$mediaelement[0].player.pause();	
+					}
+					
+					// Stop the timer
+					if( settings.timer ) {
+						mediablender_timer_stop();
+					}
+				}
+				
+				/**
+				 * Set the current attachment number.
+				 *
+				 * Also sets the class of the current nav.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_set_current( att_id ) {
+					
+					current_att = att_id;
+
+					for( var i=0; i<total; i++ ) {
+						if( attachments[i]['id'] == att_id ) {
+							current = i;
+							break;
+						}
+					}
+					
+					if( settings.nav_position != 'none' ) {
+						jQuery( '.mediablender-nav-item' ).removeClass( 'active' );
+						jQuery( '.mediablender-nav-item[href="'+att_id+'"]' ).addClass( 'active' );
+					}
+				}
+				
+				/**
+				 * Expand the comments
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_expand_comments() {
+					if( $comment_author.length > 0 ) {
+						$comment_author.slideDown();
+						$comment_author_email.slideDown();
+						$comment_author_url.slideDown( function() {
+							mediablender_resize();
+						});
+						$comment_collapse.fadeIn();
+					}
+					// Set the input placeholders
+					mediablender_set_placeholders( $comment_form );
+				}
+				
+				
+				/**
+				 * Collapse the comments
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_collapse_comments() {
+					if( $comment_warning ) {
+						$comment_warning.slideUp( function() {
+							jQuery(this).remove();
+						});
+					}
+					if( $comment_author.length > 0 ) {
+						$comment_author.slideUp();
+						$comment_author_email.slideUp();
+						$comment_author_url.slideUp( function() {
+							mediablender_resize();
+						});
+					}
+					$comment_collapse.fadeOut();
+				}
+				
+				
+				/**
+				 * Resize the gallery based on the type.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_resize() {
+					if( settings.type == 'lightbox' ) {
+						// Resize the lightbox
+						mediablender_lightbox_resize();
+					}
+					if( settings.type == 'slider' ) {
+						// Resize the attachment & container
+						mediablender_slider_resize();
+					}
+					if( settings.type == 'list' ) {
+						// Resize the attachment & container
+						mediablender_list_resize();
+					}
+				}
+				
+				
+				/**
+				 * Lightbox resize function
+				 */
+				function mediablender_lightbox_resize() {
+				
+					// Get the window dimensions
+					var win_w = $window.width(),
+							win_h = $window.height();
+				
+					// Set the container dimensions
+					var width = ((win_w-settings.padding) < settings.max_width) ? win_w-settings.padding : settings.max_width,
+							height = ((win_h-settings.padding) < settings.max_height) ? win_h-settings.padding : settings.max_height;
+							
+					if( width < (parseInt(settings.sidebar_width*2)+parseInt(settings.padding)) ) {
+						width = parseInt(settings.sidebar_width*2)+parseInt(settings.padding);
+					}
+					
+					/**
+					 * Work on this for the next version
+					 */
+					/*
+					if( width < (parseInt(settings.sidebar_width*2)+parseInt(settings.padding)) ) {
+						
+						var attwidth = settings.sidebar_width;
+						var percent = settings.sidebar_width/attachment_content_width;
+						var attheight = attachment_content_height*percent;
+						
+						$container.css({
+							width: settings.sidebar_width+'px',
+							height: (win_h-(settings.padding*2))+'px',
+							marginLeft: '-'+settings.sidebar_width/2+'px',
+							marginTop: scroll_pos+'px',
+							top: settings.padding+'px',
+							overflow: 'scroll'
+						});	
+						$attachment_container.css({
+							width: settings.sidebar_width+'px',
+							height: attheight+'px'
+						});
+						$attachment_content.css({
+							width: attwidth,
+							height: attheight,
+							top: 0,
+							left: 0,
+							marginTop: 0,
+							marginLeft: 0
+						});
+						mediablender_data_resize( 'auto' );
+
+					} else {
+					*/
+						// Set variables
+						var margintop = -(height/2),
+								attwidth = width-settings.sidebar_width,
+								attheight = height,
+								percent = (attwidth/attachment_content_width < attheight/attachment_content_height) ? attwidth/attachment_content_width : attheight/attachment_content_height;
+						
+						if( settings.sidebar_width== 0 ) {
+						
+							attwidth = width = attachment_content_width*percent;
+							attheight = height = attachment_content_height*percent;
+					
+							$container.stop().animate( {
+								width: width+'px',
+								height: height+'px',
+								marginLeft: -(width/2)+'px',
+								marginTop: margintop+'px',
+								top: '50%'
+							}, animation_speed, 'easeOutExpo' );
+							
+							$attachment_container.css({
+								width: width+'px',
+								height: height+'px'
+							});
+							$attachment_content.css({
+								width: width+'px',
+								height: height+'px',
+								top: '50%',
+								left: '50%',
+								marginTop: '-'+(height/2)+'px',
+								marginLeft: '-'+(width/2)+'px'
+							});
+
+							if( $mediaelement ) {
+							
+								$attachment_content.children().css({
+									width: width+'px',
+									height: height+'px',
+									top: '50%',
+									left: '50%',
+									marginTop: '-'+(height/2)+'px',
+									marginLeft: '-'+(width/2)+'px'
+								});
+							}
+							
+						} else {
+							$container.css({
+								width: width+'px',
+								height: height+'px',
+								marginLeft: -(width/2)+'px',
+								marginTop: margintop+'px',
+								top: '50%'
+							});
+							$attachment_container.css({
+								width: (width-settings.sidebar_width)+'px',
+								height: height+'px'
+							});
+							$attachment_content.css({
+								width: (attachment_content_width*percent)+'px',
+								height: (attachment_content_height*percent)+'px',
+								top: attheight/2+'px',
+								left: attwidth/2+'px',
+								marginTop: '-'+(attachment_content_height*percent)/2+'px',
+								marginLeft: '-'+(attachment_content_width*percent)/2+'px'
+							});
+							if( $mediaelement ) {
+								$attachment_content.children().css({
+									width: (attachment_content_width*percent)+'px',
+									height: (attachment_content_height*percent)+'px',
+									top: attheight/2+'px',
+									left: attwidth/2+'px',
+									marginTop: '-'+(attachment_content_height*percent)/2+'px',
+									marginLeft: '-'+(attachment_content_width*percent)/2+'px'
+								});
+							}
+						}
+					
+						mediablender_data_resize( height );
+					//}
+					if( settings.nav_position != 'none' && settings.nav_overlay ) {
+						if( settings.nav_position == 'top-center' || settings.nav_position == 'bottom-center' ) {
+							$nav_container.css( 'width', attwidth+'px' );
+						}
+					}
+					
+					mediablender_info_resize( attwidth, height );
+					mediablender_resize_update( attwidth, height );
+				}
+				
+				
+				
+				
+				/**
+				 * Slider Resize.
+				 * 
+				 * @since 1.1
+				 */
+				function mediablender_slider_resize() {
+					
+					// Set the container dimensions
+					var width = settings.width,
+							attwidth = width-settings.sidebar_width,
+							percent = attwidth/attachment_content_width,
+							attheight = ( settings.height ) ? settings.height : attachment_content_height*percent,
+							height = attheight;
+
+					$attachment_container.stop().animate( {
+						width: attwidth+'px',
+						height: height+'px'
+					}, animation_speed, 'easeOutExpo' );
+					$attachment_content.css({
+						width: attwidth+'px',
+						height: attheight+'px'
+					});
+					
+					if( $mediaelement || $attachment_content.children().length > 0 ) {
+						$attachment_content.children().css({
+							width: attwidth+'px',
+							height: height+'px'
+						});
+					}
+
+					if( settings.nav_position != 'none' && settings.nav_overlay ) {
+						if( settings.nav_position == 'top-center' || settings.nav_position == 'bottom-center' ) {
+							$nav_container.css( 'width', attwidth+'px' );
+						}
+					}
+					mediablender_data_resize( height );
+					mediablender_info_resize( attwidth, height );
+					mediablender_resize_update( attwidth, height );
+				}
+				
+				
+				
+				
+				/**
+				 * List resize function
+				 */
+				function mediablender_list_resize() {
+
+					// Set the container dimensions
+					var width = settings.width,
+							attwidth = width-settings.sidebar_width,
+							percent = attwidth/attachment_content_width,
+							attheight = attachment_content_height*percent,
+							height = attheight;
+							
+					$container.css({
+						width: width+'px',
+						height: height+'px'
+					});
+					$attachment_container.css({
+						width: attwidth+'px',
+						height: height+'px'
+					});
+					$attachment_content.css({
+						width: attwidth+'px',
+						height: height+'px'
+					});
+					if( $mediaelement ) {
+						$attachment_content.children().css({
+							width: attwidth+'px',
+							height: height+'px'
+						});
+					}
+					
+					mediablender_data_resize( height );
+					mediablender_info_resize( attwidth, height );
+					mediablender_resize_update( attwidth, height );
+				}
+				
+				
+				
+				
+				/**
+				 * Resize content.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_resize_update( width, height ) {
+					
+					if( $nav_container ) {
+						$nav_container.fadeIn();
+					}
+					
+					if( $next ) {
+						$prev.fadeIn();
+						$next.fadeIn();
+					}
+					
+					if( $attachment_container.find('.me-plugin') ) {
+						$attachment_container.find('.me-plugin').css({
+							width: width+'px',
+							height: height+'px'
+						});
+					}
+				}
+				
+				
+				
+				/**
+				 * Resize the data.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_data_resize( height ) {
+				
+					var commentform_height = 0;
+					
+					$data_container.css( {
+						height: height+'px'
+					});
+					$data.stop().animate( {
+						height: height+'px'
+					}, animation_speed, 'easeOutExpo' );
+
+					if( $comment_form_container ) {
+						commentform_height = $comment_form_container.outerHeight();
+						$comment_form_container.css({
+							width: (settings.sidebar_width-20)+'px'
+						});
+						$comment_form_container.find('input[type="text"]').css({
+							width: (settings.sidebar_width-65)+'px'
+						});
+						$comment_form_container.find('textarea').css({
+							width: (settings.sidebar_width-65)+'px'
+						});
+					}
+					if( $sidebar_scroll ) {
+						sidebar_scroll_top = $sidebar_scroll_container.position().top;	
+						scrollheight = height-sidebar_scroll_top-commentform_height;
+						$sidebar_scroll.css({
+							height: scrollheight+'px'
+						});
+					}
+				}
+				
+				
+				
+				/**
+				 * Resize the overlay info.
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_info_resize( attwidth, max_height ) {
+					
+					if( $overlay_info ) {
+						$overlay_info.children().css({
+							width: attwidth+'px'
+						});
+						
+						var height = $overlay_info.children( ':last' ).height();
+						if( height > max_height*.75 ) {
+							height = max_height*.75;
+						}
+						$overlay_info.css({
+							width: attwidth+'px'
+						});
+						$overlay_info.stop().animate( {
+							height: height+'px'
+						}, animation_speed, 'easeOutExpo' );				
+					}
+				}
+				
+				
+				
+				
+				/**
+				 * Get commenter cookies
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_commenter_cookies_init() {
+					if( jQuery.cookie('comment_author_'+mediablender_vars.cookie_hash) ) {
+						comment_author_cookie = jQuery.cookie('comment_author_'+mediablender_vars.cookie_hash);
+					}
+					if( jQuery.cookie('comment_author_email_'+mediablender_vars.cookie_hash) ) {
+						comment_author_email_cookie = jQuery.cookie('comment_author_email_'+mediablender_vars.cookie_hash);
+					}
+					if( jQuery.cookie('comment_author_url_'+mediablender_vars.cookie_hash) ) {
+						comment_author_url_cookie = jQuery.cookie('comment_author_url_'+mediablender_vars.cookie_hash);
+					}
+				}
+				
+				
+				
+				
+				/**
+				 * Set commenter cookies
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_commenter_set_cookies( author, email, url ) {
+
+					if( $comment_author.length > 0 ) {
+						if( comment_author_cookie != author ) {
+							comment_author_cookie = author.replace( /\\/gi, '' );
+							jQuery.cookie('comment_author_'+mediablender_vars.cookie_hash, comment_author_cookie, { expires: 365, path: '/' } );
+						}
+						if( comment_author_email_cookie != email ) {
+							comment_author_email_cookie = email.replace( /\\/gi, '' );
+							jQuery.cookie('comment_author_email_'+mediablender_vars.cookie_hash, comment_author_email_cookie, { expires: 365, path: '/' });
+						}
+						if( comment_author_url_cookie != url ) {
+							comment_author_url_cookie = url.replace( /\\/gi, '' );
+							jQuery.cookie('comment_author_url_'+mediablender_vars.cookie_hash, comment_author_url_cookie, { expires: 365, path: '/' });
+						}
+					}
+				}
+				
+				
+				
+				
+				/**
+				 * Set commenter info
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_commenter_set_info() {
+
+					if( $comment_author.length > 0 ) {
+						jQuery( 'input[name="author"]' ).each( function(index) {
+							jQuery( this ).val( comment_author_cookie );
+						});
+						jQuery( 'input[name="email"]' ).each( function(index) {
+							jQuery( this ).val( comment_author_email_cookie );
+						});
+						jQuery( 'input[name="url"]' ).each( function(index) {
+							jQuery( this ).val( comment_author_url_cookie );
+						});
+					}
+				}
+				
+				
+				
+				
+				/**
+				 * Set input placeholder
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_set_placeholders( $form ) {
+					
+					if( !placeholder_support ){	
+						$form.find( '[placeholder]' ).each( function() {
+							var input = jQuery( this );
+						  if ( input.val() == '' || input.val() == input.attr('placeholder') ) {
+								input.addClass( 'placeholder' );
+								input.val( input.attr('placeholder') );
+						  }
+					  });
+				  }
+				}
+				
+				
+				
+				
+				/**
+				 * Check for placeholder support
+				 * 
+				 * @since 1.0
+				 */
+				function mediablender_placeholder_support() {
+			    var input = document.createElement('input');
+			    return ( 'placeholder' in input );
+				}
+				
+				
+				
+				
+				/**
+				 * Timer start and stop
+				 * 
+				 * @since 1.1
+				 */
+				function mediablender_timer_start() {
+					
+					jQuery(this).everyTime( (settings.timer_speed * 1000), 'timer', function() {
+				
+						var next = ( parseInt(current)+1 == total ) ? 0 : parseInt(current)+1;
+						mediablender_attachment_load( attachments[next]['id'] );
+					});
+				}
+				
+				function mediablender_timer_stop() {
+					jQuery(this).stopTime( 'timer' );
+				}
+
+			
+								
+				
+				/*-----------------------------------------------------------------------------------*/
+				/*	Event listeners
+				/*-----------------------------------------------------------------------------------*/
+				
+				/**
+				 * Attachment link
+				 */
+				if( settings.type == 'lightbox' ) {
+					$(this).click( function( e ) {
+						e.preventDefault();
+						mediablender_attachment_load( $(this).attr('id') );
+					});
+				}
+	
+	
+				/**
+				 * Overlay click
+				 */
+				if( $overlay ) {
+					$overlay.click( function( e ) {
+						mediablender_attachment_display_reset();
+					});
+				}
+				
+				/**
+				 * Lightbox close click
+				 */
+				if( $lightbox_close_button ) {
+					$lightbox_close_button.click( function( e ) {
+						e.preventDefault();
+						mediablender_attachment_display_reset();
+					});
+				}
+			
+				/**
+				 * Previous and next clicks
+				 */
+				if( $next ) {
+					$prev.click( function( e ) {
+						e.preventDefault();
+						if( interactive ) {
+							var prev = ( current-1 < 0 ) ? total-1 : current-1;
+							mediablender_attachment_load( attachments[prev]['id'] );
+						}
+					});
+					$next.click( function( e ) {
+						e.preventDefault();
+						if( interactive ) {
+							var next = ( parseInt(current)+1 == total ) ? 0 : parseInt(current)+1;
+							mediablender_attachment_load( attachments[next]['id'] );
+						}
+					});
+				}
+	
+				/**
+				 * Resize listener
+				 */
+				jQuery( window ).resize( function() {
+			  	if(init && settings.type == 'lightbox' ) {
+			  		mediablender_lightbox_resize();
+					}
+				});
+			});
+		}
+	};
+	
+	
+	
+	
+	
+
+
+
+	
+
+
+
+	/*-----------------------------------------------------------------------------------*/
+	/*	Setup the class
+	/*-----------------------------------------------------------------------------------*/	
+	$.fn.mediablender = function( method ) {
+		
+		if ( methods[method] ) {
+			return methods[method].apply( this, Array.prototype.slice.call(arguments, 1) );
+		} else if ( typeof method === 'object' || !method ) {
+			return methods.init.apply( this, arguments );
+		} else {
+			$.error( 'Method ' +  method + ' does not exist in medaiblender' );
+		}
+	};
+		
+})( jQuery );

@@ -1,0 +1,91 @@
+/** These styles are used in the backend editor AND in your Theme. **/
+
+@charset "UTF-8";
+/* CSS Document */
+
+.tablahorarios {
+	color: #AAA9A9;
+	font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+	font-size: 12px;
+	font-style: normal;
+	line-height: 20px;
+	font-weight: normal;
+	background-color: #353535;
+	display: table;
+	padding: 8px;
+	height: auto;
+	width: 100%;
+	border-collapse: separate;
+	border: 2px solid #3E3E3E;
+	overflow: hidden;
+}
+
+.tablahorarios tr {
+	display: table-row;
+}
+
+.tablahorarios td {
+	display: table-cell;
+	padding: 5px;
+	vertical-align: baseline;
+}
+
+.columna_horas {
+	width: 0 !important;
+	text-align: center;
+}
+
+.dias_semana_lu-vi {
+	width: 20% !important;
+	text-align: center;
+}
+
+.dias_semana_lu-sa {
+	width: 16.6% !important;
+	text-align: center;
+}
+
+.dias_semana_sa-do {
+	width: 50% !important;
+	text-align: center;
+}
+
+.sala_blanca  {
+	color: #333333;
+	background-color: #f2f2f2;
+}
+
+.sala_gris {
+	color: #FFFFFF;
+	background-color: #838382;
+}
+
+.sala_gris_IC_Marratxi {
+	color: #333333;
+	background-color: #bfc9d0;
+}
+
+.sala_naranja {
+	color: #333333;
+	background-color: #ffcc33;
+}
+
+.sala_negra {
+	color: #F2F2F2;
+	background-color: #000000;
+}
+
+.sala_fitness {
+	color: #FFFFFF;
+	background-color: #ed1c24;
+}
+
+.activ_acuaticas {
+	color: #FFFFFF;
+	background-color: #29abe2;
+}
+
+.running_club {
+	color: #333333;
+	background-color: #99cc33;
+}

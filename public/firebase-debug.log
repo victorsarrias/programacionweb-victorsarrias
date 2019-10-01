@@ -1,0 +1,55 @@
+[debug] [2019-09-19T20:53:41.258Z] ----------------------------------------------------------------------
+[debug] [2019-09-19T20:53:41.267Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Victor Sarrias\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js serve
+[debug] [2019-09-19T20:53:41.268Z] CLI Version:   7.3.2
+[debug] [2019-09-19T20:53:41.268Z] Platform:      win32
+[debug] [2019-09-19T20:53:41.268Z] Node Version:  v10.16.3
+[debug] [2019-09-19T20:53:41.271Z] Time:          Thu Sep 19 2019 15:53:41 GMT-0500 (GMT-05:00)
+[debug] [2019-09-19T20:53:41.271Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2019-09-19T20:53:41.305Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2019-09-19T20:53:41.308Z] > authorizing via signed-in user
+[debug] [2019-09-19T20:53:41.309Z] [iam] checking project programacionweb-victorsarrias for permissions ["firebase.projects.get"]
+[debug] [2019-09-19T20:53:41.317Z] >>> HTTP REQUEST POST https://cloudresourcemanager.googleapis.com/v1/projects/programacionweb-victorsarrias:testIamPermissions  
+
+[debug] [2019-09-19T20:53:44.143Z] <<< HTTP RESPONSE 200
+[debug] [2019-09-19T20:53:44.150Z] >>> HTTP REQUEST GET https://firebase.googleapis.com/v1beta1/projects/programacionweb-victorsarrias  
+ 
+[debug] [2019-09-19T20:53:48.567Z] <<< HTTP RESPONSE 200
+[info] 
+[info] === Serving from 'C:\Users\Victor Sarrias\Desktop\programacionweb-victorsarrias'...
+[info] 
+[debug] [2019-09-19T20:53:48.599Z] >>> HTTP REQUEST GET https://firebase.googleapis.com/v1beta1/projects/programacionweb-victorsarrias/webApps/-/config  
+ 
+[debug] [2019-09-19T20:53:50.632Z] <<< HTTP RESPONSE 200
+[info] i  hosting: Serving hosting files from: public
+[info] +  hosting: Local server: http://localhost:5000
+[debug] [2019-09-22T04:57:26.867Z] ----------------------------------------------------------------------
+[debug] [2019-09-22T04:57:26.875Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Victor Sarrias\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js serve
+[debug] [2019-09-22T04:57:26.876Z] CLI Version:   7.3.2
+[debug] [2019-09-22T04:57:26.876Z] Platform:      win32
+[debug] [2019-09-22T04:57:26.876Z] Node Version:  v10.16.3
+[debug] [2019-09-22T04:57:26.879Z] Time:          Sat Sep 21 2019 23:57:26 GMT-0500 (GMT-05:00)
+[debug] [2019-09-22T04:57:26.880Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2019-09-22T04:57:27.008Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2019-09-22T04:57:27.011Z] > authorizing via signed-in user
+[debug] [2019-09-22T04:57:27.012Z] [iam] checking project programacionweb-victorsarrias for permissions ["firebase.projects.get"]
+[debug] [2019-09-22T04:57:27.019Z] > refreshing access token with scopes: ["email","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","openid"]
+[debug] [2019-09-22T04:57:27.020Z] >>> HTTP REQUEST POST https://www.googleapis.com/oauth2/v3/token  
+ <request body omitted>
+[debug] [2019-09-22T04:57:27.757Z] <<< HTTP RESPONSE 200
+[debug] [2019-09-22T04:57:27.810Z] >>> HTTP REQUEST POST https://cloudresourcemanager.googleapis.com/v1/projects/programacionweb-victorsarrias:testIamPermissions  
+
+[debug] [2019-09-22T04:57:28.747Z] <<< HTTP RESPONSE 200
+[debug] [2019-09-22T04:57:28.751Z] >>> HTTP REQUEST GET https://firebase.googleapis.com/v1beta1/projects/programacionweb-victorsarrias  
+ 
+[debug] [2019-09-22T04:57:29.461Z] <<< HTTP RESPONSE 200
+[info] 
+[info] === Serving from 'C:\Users\Victor Sarrias\Desktop\programacionweb-victorsarrias'...
+[info] 
+[debug] [2019-09-22T04:57:29.560Z] >>> HTTP REQUEST GET https://firebase.googleapis.com/v1beta1/projects/programacionweb-victorsarrias/webApps/-/config  
+ 
+[debug] [2019-09-22T04:57:30.068Z] <<< HTTP RESPONSE 200
+[warn] !  hosting: Port 5000 is not available. Trying another port...
+[info] i  hosting: Serving hosting files from: public
+[info] +  hosting: Local server: http://localhost:5005

@@ -1,0 +1,73 @@
+/* put here your custom css styles */
+
+.gallery_box .description
+{
+	width: 200px;
+	height: 72px;
+	background-color: #409915;
+	padding: 20px;
+	background-position: 220px center;
+}
+
+
+	.gallery_box:h3
+{
+	color: #fff !important;
+
+.titulo_modulo_pastillaazul
+{
+	background-color: #0abaff;
+	color: #f9f9f9;
+	display: block;
+	font-family: 'Signika Negative', sans-serif;
+	font-size: 24px;
+	font-weight: normal;
+	height: 30px;
+	line-height: 30px;
+	margin-bottom: 8px;
+	margin-left: 0px;
+	margin-right: 0px;
+	margin-top: 0px;
+	padding-bottom: 6px;
+	padding-left: 16px;
+	padding-right: 16px;
+	padding-top: 6px;
+	text-rendering: optimizelegibility;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+}
+.titulo_modulo_pastillanaranja
+{
+	background-color: #f76503;
+	color: #f9f9f9;
+	display: block;
+	font-family: 'Signika Negative', sans-serif;
+	font-size: 24px;
+	font-weight: normal;
+	height: 30px;
+	line-height: 30px;
+	margin-bottom: 8px;
+	margin-left: 0px;
+	margin-right: 0px;
+	margin-top: 0px;
+	padding-bottom: 6px;
+	padding-left: 16px;
+	padding-right: 16px;
+	padding-top: 6px;
+	text-rendering: optimizelegibility;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+}
+.ui-tabs-nav li a,
+.tabs_navigation li a,
+.scrolling_list li .number,
+.categories li, .widget_categories li,
+.categories li a, .widget_categories li a,
+.pagination li a, .pagination li span,
+.bread_crumb li,
+.accordion .ui-accordion-header h5,
+#comments_list .comment_details .posted_by,
+.header_top_sidebar 
+{
+	color: #c5c5c5 !important;
+}
